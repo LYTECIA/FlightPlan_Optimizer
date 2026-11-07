@@ -43,3 +43,30 @@ This log tracks design decisions, technical choices, challenges, and progress th
 
 ### Next Steps:
 * Build domain models in `models/` (`Airport`, `Waypoint`, `FlightPlan`) to bridge raw SQL tuples with strongly-typed Python objects.
+
+---
+
+## 📝 Entry 3: Domain Layer Implementation (OOP Models) & Architectural Decoupling
+
+### What I Did:
+1. **Domain Models Creation:** Implemented the core Object-Oriented Domain Layer in `models/` by creating three dedicated dataclasses:
+   - `models/airport.py`: Models origin and destination airports with ICAO codes and geographic coordinates.
+   - `models/waypoint.py`: Models en-route navigation nodes along airways.
+   - `models/flight_plan.py`: Encapsulates the output of a computed optimal trajectory (waypoint sequence, total distance in km, and total fuel burn in kg).
+2. **Standardized Documentation:** Added clear, professional Python type hints and standardized English docstrings (`"""..."""`) across all domain models.
+
+### Challenges & Insights (What I Realized):
+* **Bridging Java OOP (Records/DTOs) with Python `@dataclass`:**
+  Drawing from prior Java experience (where data transfer objects often require verbose getter/setter boilerplate or Java 14+ `record` constructs), Python’s `@dataclass` decorator provides an elegant solution. It automatically generates initializers (`__init__`), equality checks (`__eq__`), and string representations (`__repr__`), keeping the codebase clean without sacrificing strong typing.
+* **Special Methods & String Formatting:**
+  Leveraged Python *dunder methods* like `__str__` (the direct equivalent of Java’s `toString()`) and formatted f-strings (`:.1f`) to produce human-readable summaries when inspecting domain objects in logs or console output.
+* **Avoid Mutability Bugs with `field(default_factory=list)`:**
+  Learned a critical Python-specific nuance: assigning a mutable default argument directly (e.g., `waypoints_path: List[str] = []`) causes all class instances to share the same list reference in memory. Using `field(default_factory=list)` ensures each `FlightPlan` instance receives its own isolated list.
+* **Architectural Pragmatism (YAGNI Principle):**
+  Questioned whether every SQL table needed a corresponding Python class (e.g., `Route`, `RestrictedZone`). Realized that in a clean multi-tiered architecture:
+  - `Airport` and `Waypoint` serve as active **Graph Vertices** containing spatial behavior (`get_coordinates()`).
+  - `FlightPlan` is the primary **Domain Result Object**.
+  - `routes` are directly mapped as **Graph Edges** within NetworkX, and `restricted_zones` act as temporary SQL pre-filtering constraints. Creating dedicated classes for them would add unnecessary abstraction overhead (*over-engineering*).
+
+### Next Steps:
+* Move to the core algorithmic engine (`core/navigation_graph.py` and `core/pathfinder.py`) to build the NetworkX navigation graph from SQLite data and implement constraint-filtered Dijkstra pathfinding.
